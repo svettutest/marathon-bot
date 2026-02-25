@@ -1,1 +1,1 @@
-worker: pip install -r bot/requirements.txt && cd bot && python bot.py
+web: cd bot && python bot.py
