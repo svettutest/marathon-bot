@@ -170,7 +170,7 @@ async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         for admin_id in ADMINS:
             try:
                 await ctx.bot.send_message(admin_id,
-                    f"🆕 Новая участница!\n👤 *{text}*\n🆔 `{uid}`\n@{u['tg_username'] or 'нет username'}",
+                    f"🆕 Новая участница!\n👤 *{text}*\n🆔 `{uid}`\nUsername: {u.get('tg_username') or 'нет'}",
                     parse_mode="Markdown")
             except: pass
 
@@ -473,7 +473,7 @@ async def handle_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             await ctx.bot.send_photo(
                 admin_id, file_id,
                 caption=(f"📸 *Скриншот от участницы*\n"
-                         f"👤 {u['name']} (@{u.get('tg_username', '—')})\n"
+                         f"👤 {u['name']} (username: {u.get('tg_username') or 'нет'})\n"
                          f"📅 День {day}\n"
                          f"⭐ Текущие баллы: {calc_points(u)['total']}"),
                 parse_mode="Markdown", reply_markup=kb)
