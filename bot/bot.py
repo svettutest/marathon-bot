@@ -170,8 +170,7 @@ async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         for admin_id in ADMINS:
             try:
                 await ctx.bot.send_message(admin_id,
-                    f"🆕 Новая участница!\n👤 *{text}*\n🆔 `{uid}`\nUsername: {u.get('tg_username') or 'нет'}",
-                    parse_mode="Markdown")
+                    f"🆕 Новая участница!\n👤 {text}\n🆔 {uid}\nUsername: {u.get('tg_username') or 'нет'}")
             except: pass
 
         await update.message.reply_text(
@@ -472,11 +471,11 @@ async def handle_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             ])
             await ctx.bot.send_photo(
                 admin_id, file_id,
-                caption=(f"📸 *Скриншот от участницы*\n"
+                caption=(f"📸 Скриншот от участницы\n"
                          f"👤 {u['name']} (username: {u.get('tg_username') or 'нет'})\n"
                          f"📅 День {day}\n"
                          f"⭐ Текущие баллы: {calc_points(u)['total']}"),
-                parse_mode="Markdown", reply_markup=kb)
+                parse_mode=None, reply_markup=kb)
         except Exception as e:
             logger.error(f"Failed to send to admin {admin_id}: {e}")
 
@@ -835,6 +834,7 @@ async def run_web_server():
     app.router.add_post("/api/mark_set", api_mark_set)
     app.router.add_post("/api/change_mode", api_change_mode)
     app.router.add_get("/api/content", api_content)
+    app.router.add_static("/", path="webapp", name="static")
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8080)
