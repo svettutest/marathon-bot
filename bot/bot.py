@@ -835,7 +835,6 @@ async def run_web_server():
     app.router.add_post("/api/mark_set", api_mark_set)
     app.router.add_post("/api/change_mode", api_change_mode)
     app.router.add_get("/api/content", api_content)
-    app.router.add_static("/", path="webapp", name="static")
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8080)
