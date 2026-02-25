@@ -828,12 +828,140 @@ async def api_content(request):
     except: pass
     return web.json_response({"error": "Bad day"}, status=400)
 
+async def api_register(request):
+    """Register user from Mini App onboarding"""
+    try:
+        data = await request.json()
+        uid = str(data["user_id"])
+        name = data.get("name", "Участница")
+        mode_key = data.get("mode", "4x25")
+        reminder = data.get("reminder_time", "09:00")
+        tg_username = data.get("tg_username", "")
+
+        if mode_key not in MODES:
+            return web.json_response({"error": "Bad mode"}, status=400)
+
+        existing = get_user(uid)
+        if existing and existing.get("setup_step") == "done":
+            # Already registered — return existing
+            day = get_current_day(existing)
+            mode = MODES.get(existing.get("mode", "4x25"))
+            pts = calc_points(existing)
+            return web.json_response({
+                **existing, "current_day": min(day, 15), "mode_info": mode,
+                "daily_content": DAILY_CONTENT[min(day, 14)-1] if 1 <= day <= 14 else None,
+                "streak": calc_streak(existing), "points": pts,
+                "modes": MODES, "brand": BRAND, "already_registered": True,
+            })
+
+        mode = MODES[mode_key]
+        start = datetime.now().strftime("%Y-%m-%d")
+        days = {str(d): {"sets_done": [False]*mode["sets"], "completed": False} for d in range(1, 15)}
+
+        u = {
+            "name": name, "mode": mode_key, "start_date": start,
+            "reminder_times": [reminder], "days": days,
+            "setup_step": "done", "instagram_points": 0,
+            "tg_username": tg_username,
+        }
+        save_user(uid, u)
+        logger.info(f"New user registered via Mini App: {name} ({uid})")
+
+        # Notify admins
+        for admin_id in ADMINS:
+            try:
+                # Use global bot reference
+                await bot_app.bot.send_message(admin_id,
+                    f"🆕 Новая участница (Mini App)!\n👤 {name}\n🆔 {uid}\nUsername: {tg_username or 'нет'}\nРежим: {mode_key}")
+            except Exception as e:
+                logger.warning(f"Admin notify failed: {e}")
+
+        day = get_current_day(u)
+        pts = calc_points(u)
+        return web.json_response({
+            **u, "current_day": min(day, 15), "mode_info": mode,
+            "daily_content": DAILY_CONTENT[0],
+            "streak": 0, "points": pts,
+            "modes": MODES, "brand": BRAND,
+        })
+    except Exception as e:
+        logger.error(f"Register error: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+async def api_leaderboard(request):
+    """Get leaderboard data"""
+    try:
+        users = get_all_users()
+        board = []
+        for uid, u in users.items():
+            if u.get("setup_step") != "done":
+                continue
+            pts = calc_points(u)
+            board.append({
+                "name": u.get("name", "?"),
+                "mode": u.get("mode", "?"),
+                "points": pts["total"],
+                "squats_pts": pts["squats"],
+                "instagram_pts": pts["instagram"],
+                "streak": calc_streak(u),
+            })
+        board.sort(key=lambda x: x["points"], reverse=True)
+        return web.json_response({"leaderboard": board})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+async def api_change_reminder(request):
+    """Change reminder time"""
+    try:
+        data = await request.json()
+        uid = str(data["user_id"])
+        new_time = data["time"]  # "HH:MM"
+        u = get_user(uid)
+        if not u:
+            return web.json_response({"error": "Not found"}, status=404)
+        u["reminder_times"] = [new_time]
+        save_user(uid, u)
+        # Re-schedule jobs if bot_app available
+        try:
+            await schedule_user_jobs(bot_app, uid, u)
+        except: pass
+        return web.json_response({"ok": True})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
+
+async def api_health(request):
+    return web.json_response({"status": "ok", "bot": "100 раз за раз"})
+
+# CORS middleware
+@web.middleware
+async def cors_middleware(request, handler):
+    if request.method == "OPTIONS":
+        resp = web.Response()
+    else:
+        try:
+            resp = await handler(request)
+        except web.HTTPException as ex:
+            resp = ex
+    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return resp
+
+# Global bot reference for API -> bot notifications
+bot_app = None
+
 async def run_web_server():
-    app = web.Application()
+    app = web.Application(middlewares=[cors_middleware])
+    app.router.add_get("/api/health", api_health)
     app.router.add_get("/api/user", api_get_user)
+    app.router.add_post("/api/register", api_register)
     app.router.add_post("/api/mark_set", api_mark_set)
     app.router.add_post("/api/change_mode", api_change_mode)
+    app.router.add_post("/api/change_reminder", api_change_reminder)
     app.router.add_get("/api/content", api_content)
+    app.router.add_get("/api/leaderboard", api_leaderboard)
+    # Handle OPTIONS preflight for all routes
+    app.router.add_route("OPTIONS", "/{path:.*}", lambda r: web.Response())
 
     runner = web.AppRunner(app)
     await runner.setup()
@@ -846,7 +974,9 @@ async def run_web_server():
 # ══════════════════════════════════════
 
 def main():
+    global bot_app
     app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+    bot_app = app
 
     # Handlers
     app.add_handler(CommandHandler("start", cmd_start))
