@@ -1042,6 +1042,275 @@ async def run_web_server():
     logger.info("Web server on :8080")
 
 # ══════════════════════════════════════
+# COURSE PRESENTATION — «Чистое тело»
+# ══════════════════════════════════════
+
+COURSE_SCREENS = [
+    # Screen 0: Боль + Усиление
+    {
+        "text": (
+            "🔹 <b>Знакомо?</b>\n\n"
+            "▪️ Утром встала - энергии хватило до обеда\n"
+            "▪️ Живот надувается после каждой еды\n"
+            "▪️ Спишь 8 часов, а просыпаешься разбитой\n"
+            "▪️ Кожа тусклая, хотя крема дорогие\n\n"
+            "Врачи объясняют «возраст». Ты сама думаешь «устала». Но тело говорит другое.\n\n"
+            "ЖКТ, микробиом, гормоны - всё связано. И пока внутри не в порядке, ни тренировки, ни кремы не дадут того, что хочешь.\n\n"
+            "Ты в марафоне. Ты приседаешь. Уже одно это говорит о тебе больше, чем любые обещания себе «с понедельника».\n\n"
+            "Тело разогрето, привычка появилась. Если добавить работу изнутри прямо сейчас - результат будет другим.\n\n"
+            "<b>Этот момент не повторится.</b>"
+        ),
+        "button": "Что с этим делать? →",
+    },
+    # Screen 1: Решение + Автор
+    {
+        "text": (
+            "🌿 <b>Чистое тело - чистое сознание</b>\n"
+            "Бережная программа очищения за 5 недель\n\n"
+            "◾ 5 недель программы\n"
+            "◾ 30 тем и уроков\n"
+            "◾ 4 живые встречи\n"
+            "◾ 855+ учениц прошли\n\n"
+            "Метод: очищение маслом гвоздики\n\n"
+            "✓ Еженедельные живые встречи с Уточкой\n"
+            "✓ Поддержка кураторов на всём пути\n"
+            "✓ Дневник очищения + книга рецептов\n"
+            "✓ Протокол масла гвоздики с инструкцией\n\n"
+            "🦆 <b>Автор - Утка Лав</b>\n"
+            "Специалист по биохимии и физиологии. Чемпионка Европы. "
+            "48 лет в стройном теле. 15+ лет без мяса. Автор методик омоложения."
+        ),
+        "button": "Посмотреть программу →",
+        "extra_button": {"text": "Уже хочу — тарифы →", "callback": "cp_5"},
+    },
+    # Screen 2: Программа
+    {
+        "text": (
+            "📋 <b>Программа курса</b>\n\n"
+            "🫀 <b>Цикл 1: Тело</b>\n"
+            "Биохимия и физиология\n"
+            "ЖКТ · Микробиом · Гормоны · Питание · Кожа · "
+            "Сахарная зависимость · Менструации · Спорт · Интуитивное питание\n\n"
+            "🧠 <b>Цикл 2: Сознание</b>\n"
+            "Психология и душа\n"
+            "Стресс · Энергия · Сила духа · Привычки ума · "
+            "Треугольник Карпмана · Эго · Сознание · Благодарность\n\n"
+            "15 тем про тело + 15 тем про сознание = полная трансформация изнутри и снаружи"
+        ),
+        "button": "Какие результаты? →",
+    },
+    # Screen 3: Результаты
+    {
+        "text": (
+            "📊 <b>Результаты участниц</b>\n"
+            "Реальные цифры по прошлым потокам:\n\n"
+            "🔴 855 - повысили энергию и либидо\n"
+            "🟢 711 - снизили вес и наладили ЖКТ\n"
+            "🟣 702 - расцвет продуктивности\n"
+            "🔵 684 - научились слышать тело\n"
+            "🟡 657 - ясность ума\n"
+            "🟠 612 - изменения во внешности\n"
+            "🩵 378 - нормальный сон\n"
+            "🌿 324 - увеличили доход"
+        ),
+        "button": "Читать отзывы →",
+    },
+    # Screen 4: Отзывы
+    {
+        "text": (
+            "💬 <b>Отзывы участниц</b>\n"
+            "Реальные истории:\n\n"
+            "«Похудела на 12 кг после первого потока. Вернулась в вес до родов после 5 детей. "
+            "Пришли регулярные месячные в 52 года. Проблемы с костями и суставами прошли - "
+            "еле ходила, теперь летаю!»\n\n"
+            "«Сижу перед пакетом самых вкусных конфет, а мне их не хочется. "
+            "Организм отказывается, мозг в шоке! Не хочется теста, не переедаю и насыщаюсь.»\n\n"
+            "«Наладилась личная жизнь с человеком, которым мы боялись быть вместе много лет. "
+            "Энергия повысилась, захотелось жить, мечтать, творить.»"
+        ),
+        "button": "Посмотреть тарифы →",
+        "extra_button": {"text": "Все отзывы в Telegram →", "url": "https://t.me/otzyvyctcs"},
+    },
+    # Screen 5: Тарифы
+    {
+        "text": (
+            "⚡ <b>Только для тех, кто приседал с Уточкой</b>\n"
+            "Эти цены действуют до 14 марта.\n"
+            "Не для подписчиков. Не для новичков. Для вас.\n\n"
+            "━━━━━━━━━━━━━━\n"
+            "🥇 <b>GOLD</b> - 145 000 руб\n"
+            "<i>Осталось 6 мест!</i>\n"
+            "Всё из VIP + разборы в малой группе + индивидуальная консультация "
+            "доктора-нутрициолога + личная консультация с Уткой Лав\n\n"
+            "━━━━━━━━━━━━━━\n"
+            "🥈 <b>VIP + ВРАЧ</b> - 38 900 руб <s>58 900</s>\n"
+            "<i>Популярный</i>\n"
+            "Программа + обратная связь от доктора-нутрициолога + анкета здоровья + "
+            "дорожная карта + консультация доктора + личное ведение Уточки\n\n"
+            "━━━━━━━━━━━━━━\n"
+            "🥉 <b>СТАНДАРТ</b> - 24 900 руб <s>35 900</s>\n"
+            "5 недель + протокол + 4 встречи + кураторы + дневник + книга рецептов\n\n"
+            "💡 711 руб в день - меньше одного визита к врачу"
+        ),
+        "button": "Что ещё получу? →",
+        "tariff_buttons": True,
+    },
+    # Screen 6: Бонус + Гарантия + Дедлайн
+    {
+        "text": (
+            "🎁 <b>Бонус «Марафонка»</b>\n"
+            "Только для тех, кто приседает с Уточкой\n\n"
+            "📋 Чек-лист подготовки к курсу - питание + тело за 7 дней до старта\n\n"
+            "🎥 Спецэфир «После марафона» - запись закрытого эфира, только для своих\n\n"
+            "💰 Цена на 5 000 - 20 000 руб дешевле, чем на сайте\n\n"
+            "━━━━━━━━━━━━━━\n\n"
+            "🛡 <b>Гарантия 14 дней</b>\n"
+            "Пройди первые 2 недели, выполняй практики. "
+            "Если не почувствуешь изменений - верну деньги. Без вопросов.\n\n"
+            "━━━━━━━━━━━━━━\n\n"
+            "📅 <b>Старт курса: 18 марта</b>\n\n"
+            "Сегодня 11 марта. До 14-го три дня. Звучит как много. "
+            "Но вот что обычно происходит: говоришь себе «куплю 13-го» - "
+            "и 13-го находится причина отложить. А 14-го всё.\n\n"
+            "🟢 <b>Кто оплатит сегодня - получит чек-лист подготовки и доступ "
+            "в закрытый канал прямо сейчас. Не 18 марта. Сегодня.</b>\n\n"
+            "Вопросы? Напиши менеджеру"
+        ),
+        "button": "ХОЧУ ОПЛАТИТЬ →",
+        "final": True,
+    },
+]
+
+
+def build_course_keyboard(screen_idx: int):
+    """Build inline keyboard for course presentation screen"""
+    screen = COURSE_SCREENS[screen_idx]
+    buttons = []
+
+    # Tariff payment buttons
+    if screen.get("tariff_buttons"):
+        buttons.append([InlineKeyboardButton("🥇 GOLD - 145 000 руб", url="https://ytkalove.online/Gold_145.000")])
+        buttons.append([InlineKeyboardButton("🥈 VIP - 38 900 руб", url="https://ytkalove.online/VIP_38.900")])
+        buttons.append([InlineKeyboardButton("🥉 Стандарт - 24 900 руб", url="https://ytkalove.online/Standart_24.900")])
+
+    # Main navigation button
+    if screen.get("final"):
+        # Last screen -> go to tariffs
+        buttons.append([InlineKeyboardButton("🔴 " + screen["button"], callback_data="cp_5")])
+    else:
+        buttons.append([InlineKeyboardButton(screen["button"], callback_data=f"cp_{screen_idx + 1}")])
+
+    # Extra button (отзывы link, quick jump to tariffs)
+    extra = screen.get("extra_button")
+    if extra:
+        if extra.get("url"):
+            buttons.append([InlineKeyboardButton(extra["text"], url=extra["url"])])
+        elif extra.get("callback"):
+            buttons.append([InlineKeyboardButton(extra["text"], callback_data=extra["callback"])])
+
+    # Site link on tariffs screen
+    if screen.get("tariff_buttons"):
+        buttons.append([InlineKeyboardButton("Все тарифы на сайте →", url="https://ytka-health.online/chistoe_telo")])
+
+    return InlineKeyboardMarkup(buttons)
+
+
+async def cmd_course(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Admin-only: test course presentation. Usage: /course"""
+    uid = update.effective_user.id
+    if uid not in ADMINS:
+        return
+    # Send first screen
+    await update.message.reply_text(
+        COURSE_SCREENS[0]["text"],
+        parse_mode="HTML",
+        reply_markup=build_course_keyboard(0),
+    )
+
+
+async def cb_course_presentation(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle course presentation navigation"""
+    query = update.callback_query
+    await query.answer()
+
+    # Parse screen index from callback: cp_0, cp_1, ... cp_6
+    try:
+        idx = int(query.data.split("_")[1])
+    except (IndexError, ValueError):
+        return
+
+    if idx < 0 or idx >= len(COURSE_SCREENS):
+        return
+
+    screen = COURSE_SCREENS[idx]
+
+    try:
+        await query.edit_message_text(
+            text=screen["text"],
+            parse_mode="HTML",
+            reply_markup=build_course_keyboard(idx),
+        )
+    except Exception:
+        # If edit fails (same content), send new message
+        await query.message.reply_text(
+            text=screen["text"],
+            parse_mode="HTML",
+            reply_markup=build_course_keyboard(idx),
+        )
+
+
+async def cmd_broadcast_course(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Admin-only: broadcast course presentation to ALL users. Usage: /broadcast_course"""
+    uid = update.effective_user.id
+    if uid not in ADMINS:
+        return
+
+    users = get_all_users()
+    active = {k: v for k, v in users.items() if v.get("setup_step") == "done"}
+
+    # Ask for confirmation
+    await update.message.reply_text(
+        f"Отправить презентацию курса {len(active)} участницам?\n"
+        f"Нажми /confirm_broadcast чтобы подтвердить.",
+    )
+    ctx.user_data["broadcast_ready"] = True
+
+
+async def cmd_confirm_broadcast(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Confirm and send broadcast"""
+    uid = update.effective_user.id
+    if uid not in ADMINS:
+        return
+    if not ctx.user_data.get("broadcast_ready"):
+        await update.message.reply_text("Сначала напиши /broadcast_course")
+        return
+
+    ctx.user_data["broadcast_ready"] = False
+    users = get_all_users()
+    active = {k: v for k, v in users.items() if v.get("setup_step") == "done"}
+
+    sent = 0
+    failed = 0
+    for user_id in active:
+        try:
+            await ctx.bot.send_message(
+                chat_id=int(user_id),
+                text=COURSE_SCREENS[0]["text"],
+                parse_mode="HTML",
+                reply_markup=build_course_keyboard(0),
+            )
+            sent += 1
+            await asyncio.sleep(0.1)  # Rate limiting
+        except Exception as e:
+            logger.warning(f"Broadcast failed for {user_id}: {e}")
+            failed += 1
+
+    await update.message.reply_text(
+        f"Отправлено: {sent}\nОшибки: {failed}"
+    )
+
+
+# ══════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════
 
@@ -1058,6 +1327,10 @@ def main():
     app.add_handler(CallbackQueryHandler(cb_approve_reject, pattern=r"^(approve|reject)_"))
     app.add_handler(CallbackQueryHandler(cb_settings, pattern=r"^s_"))
     app.add_handler(CallbackQueryHandler(cb_restore, pattern=r"^restore_(yes|no)_"))
+    app.add_handler(CommandHandler("course", cmd_course))
+    app.add_handler(CommandHandler("broadcast_course", cmd_broadcast_course))
+    app.add_handler(CommandHandler("confirm_broadcast", cmd_confirm_broadcast))
+    app.add_handler(CallbackQueryHandler(cb_course_presentation, pattern=r"^cp_"))
     app.add_handler(MessageHandler(filters.Document.ALL & filters.CaptionRegex(r"^/restore"), cmd_restore))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
