@@ -683,6 +683,78 @@ async def cmd_export(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     buf.name = "marathon_export.csv"
     await update.message.reply_document(buf, caption="📊 Экспорт данных участниц")
 
+async def cmd_restore(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Восстановление users.json из JSON-файла (только для админов)"""
+    if update.effective_user.id not in ADMINS:
+        await update.message.reply_text("⛔ Только для админов")
+        return
+
+    doc = update.message.document
+    if not doc or not doc.file_name.endswith(".json"):
+        await update.message.reply_text("❌ Отправь JSON-файл с подписью /restore")
+        return
+
+    try:
+        file = await ctx.bot.get_file(doc.file_id)
+        file_bytes = await file.download_as_bytearray()
+        data = json.loads(file_bytes.decode("utf-8"))
+    except Exception as e:
+        await update.message.reply_text(f"❌ Ошибка чтения файла: {e}")
+        return
+
+    if not isinstance(data, dict):
+        await update.message.reply_text("❌ Файл должен содержать JSON-объект с пользователями")
+        return
+
+    admin_id = update.effective_user.id
+    ctx.bot_data[f"restore_pending_{admin_id}"] = data
+
+    kb = InlineKeyboardMarkup([
+        [InlineKeyboardButton("✅ Да, заменить", callback_data=f"restore_yes_{admin_id}")],
+        [InlineKeyboardButton("❌ Нет, отмена", callback_data=f"restore_no_{admin_id}")],
+    ])
+    await update.message.reply_text(
+        f"📂 *Файл загружен*\n\n"
+        f"👥 Пользователей в файле: *{len(data)}*\n\n"
+        f"⚠️ Заменить текущий `data/users.json`?",
+        parse_mode="Markdown",
+        reply_markup=kb
+    )
+
+async def cb_restore(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+
+    if q.from_user.id not in ADMINS:
+        return
+
+    parts = q.data.split("_")
+    action = parts[1]       # yes / no
+    admin_id = int(parts[2])
+
+    if q.from_user.id != admin_id:
+        return
+
+    if action == "no":
+        ctx.bot_data.pop(f"restore_pending_{admin_id}", None)
+        await q.edit_message_text("❌ Восстановление отменено")
+        return
+
+    data = ctx.bot_data.pop(f"restore_pending_{admin_id}", None)
+    if data is None:
+        await q.edit_message_text("❌ Данные устарели. Загрузи файл заново.")
+        return
+
+    try:
+        save_data(data)
+        await q.edit_message_text(
+            f"✅ *Восстановление выполнено!*\n"
+            f"👥 Записано пользователей: *{len(data)}*",
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        await q.edit_message_text(f"❌ Ошибка записи: {e}")
+
 # ══════════════════════════════════════
 # REMINDERS & DAILY CONTENT
 # ══════════════════════════════════════
@@ -985,6 +1057,8 @@ def main():
     app.add_handler(CallbackQueryHandler(cb_mode, pattern=r"^mode_"))
     app.add_handler(CallbackQueryHandler(cb_approve_reject, pattern=r"^(approve|reject)_"))
     app.add_handler(CallbackQueryHandler(cb_settings, pattern=r"^s_"))
+    app.add_handler(CallbackQueryHandler(cb_restore, pattern=r"^restore_(yes|no)_"))
+    app.add_handler(MessageHandler(filters.Document.ALL & filters.CaptionRegex(r"^/restore"), cmd_restore))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
