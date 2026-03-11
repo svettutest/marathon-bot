@@ -1220,11 +1220,14 @@ async def cmd_course(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     if uid not in ADMINS:
         return
-    # Send first screen
     await update.message.reply_text(
-        COURSE_SCREENS[0]["text"],
-        parse_mode="HTML",
-        reply_markup=build_course_keyboard(0),
+        "Я для вас собрала специальные условия. Нажмите кнопку ниже",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton(
+                "Узнать подробности",
+                web_app=WebAppInfo(url="https://svettutest.github.io/marathon-tracker/course.html"),
+            )
+        ]]),
     )
 
 
@@ -1295,9 +1298,13 @@ async def cmd_confirm_broadcast(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         try:
             await ctx.bot.send_message(
                 chat_id=int(user_id),
-                text=COURSE_SCREENS[0]["text"],
-                parse_mode="HTML",
-                reply_markup=build_course_keyboard(0),
+                text="Я для вас собрала специальные условия. Нажмите кнопку ниже",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton(
+                        "Узнать подробности",
+                        web_app=WebAppInfo(url="https://svettutest.github.io/marathon-tracker/course.html"),
+                    )
+                ]]),
             )
             sent += 1
             await asyncio.sleep(0.1)  # Rate limiting
