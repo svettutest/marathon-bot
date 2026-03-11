@@ -1357,6 +1357,7 @@ async def handle_send_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("Да с кнопкой", callback_data="send_yes_btn")],
             [InlineKeyboardButton("Да без кнопки", callback_data="send_yes_nobtn")],
+            [InlineKeyboardButton("Тест — только мне", callback_data="send_test")],
             [InlineKeyboardButton("Отмена", callback_data="send_cancel")],
         ]),
     )
@@ -1372,7 +1373,7 @@ async def cb_send_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if uid not in ADMINS:
         return
 
-    action = query.data  # send_yes_btn / send_yes_nobtn / send_cancel
+    action = query.data  # send_yes_btn / send_yes_nobtn / send_test / send_cancel
 
     if action == "send_cancel":
         ctx.user_data.pop("send_state", None)
@@ -1385,9 +1386,44 @@ async def cb_send_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("Нет сообщения для рассылки. Начни с /send")
         return
 
-    with_button = action == "send_yes_btn"
+    with_button = action in ("send_yes_btn", "send_test")
+    is_test = action == "send_test"
     source_chat_id = ctx.user_data["send_chat_id"]
     source_msg_id = ctx.user_data["send_message"]
+
+    if not is_test:
+        ctx.user_data.pop("send_state", None)
+        ctx.user_data.pop("send_message", None)
+        ctx.user_data.pop("send_chat_id", None)
+
+    course_markup = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            "Узнать подробности",
+            web_app=WebAppInfo(url="https://svettutest.github.io/marathon-tracker/course.html"),
+        )
+    ]])
+
+    if is_test:
+        # Send only to the admin who initiated
+        await query.edit_message_text("Отправляю тест...")
+        try:
+            await ctx.bot.copy_message(
+                chat_id=uid,
+                from_chat_id=source_chat_id,
+                message_id=source_msg_id,
+            )
+            if with_button:
+                await ctx.bot.send_message(
+                    chat_id=uid,
+                    text="Я для вас собрала специальные условия. Нажмите кнопку ниже",
+                    reply_markup=course_markup,
+                )
+            await query.message.reply_text(
+                "Тест отправлен. Можешь повторить рассылку — /send",
+            )
+        except Exception as e:
+            await query.message.reply_text(f"Ошибка теста: {e}")
+        return
 
     ctx.user_data.pop("send_state", None)
     ctx.user_data.pop("send_message", None)
@@ -1397,13 +1433,6 @@ async def cb_send_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     users = get_all_users()
     active = {k: v for k, v in users.items() if v.get("setup_step") == "done"}
-
-    course_markup = InlineKeyboardMarkup([[
-        InlineKeyboardButton(
-            "Узнать подробности",
-            web_app=WebAppInfo(url="https://svettutest.github.io/marathon-tracker/course.html"),
-        )
-    ]])
 
     sent = 0
     failed = 0
