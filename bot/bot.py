@@ -16,7 +16,7 @@ from telegram import (
     WebAppInfo, ReplyKeyboardMarkup, KeyboardButton
 )
 from telegram.ext import (
-    Application, CommandHandler, CallbackQueryHandler,
+    Application, ApplicationHandlerStop, CommandHandler, CallbackQueryHandler,
     MessageHandler, filters, ContextTypes
 )
 from aiohttp import web
@@ -1318,6 +1318,118 @@ async def cmd_confirm_broadcast(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 
 # ══════════════════════════════════════
+# UNIVERSAL BROADCAST — /send
+# ══════════════════════════════════════
+
+async def cmd_send(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Admin-only: start universal broadcast. Usage: /send"""
+    uid = update.effective_user.id
+    if uid not in ADMINS:
+        return
+    ctx.user_data["send_state"] = "waiting_message"
+    ctx.user_data.pop("send_message", None)
+    await update.message.reply_text(
+        "Отправь мне сообщение для рассылки. Это может быть текст, фото, видео, "
+        "кружочек, документ — что угодно. Я перешлю это всем участницам."
+    )
+
+
+async def handle_send_message(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Capture the message admin wants to broadcast"""
+    uid = update.effective_user.id
+    if uid not in ADMINS or ctx.user_data.get("send_state") != "waiting_message":
+        return  # Not in send flow, let other handlers process
+
+    msg = update.message
+    if not msg:
+        return
+
+    ctx.user_data["send_message"] = msg.message_id
+    ctx.user_data["send_chat_id"] = msg.chat_id
+    ctx.user_data["send_state"] = "waiting_confirm"
+
+    users = get_all_users()
+    active_count = sum(1 for v in users.values() if v.get("setup_step") == "done")
+
+    await msg.reply_text(
+        f"Разослать это сообщение {active_count} участницам?\n"
+        "Добавить кнопку с презентацией курса?",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("Да с кнопкой", callback_data="send_yes_btn")],
+            [InlineKeyboardButton("Да без кнопки", callback_data="send_yes_nobtn")],
+            [InlineKeyboardButton("Отмена", callback_data="send_cancel")],
+        ]),
+    )
+    raise ApplicationHandlerStop  # Prevent other handlers from processing this message
+
+
+async def cb_send_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Handle broadcast confirmation callback"""
+    query = update.callback_query
+    await query.answer()
+
+    uid = update.effective_user.id
+    if uid not in ADMINS:
+        return
+
+    action = query.data  # send_yes_btn / send_yes_nobtn / send_cancel
+
+    if action == "send_cancel":
+        ctx.user_data.pop("send_state", None)
+        ctx.user_data.pop("send_message", None)
+        ctx.user_data.pop("send_chat_id", None)
+        await query.edit_message_text("Рассылка отменена.")
+        return
+
+    if ctx.user_data.get("send_state") != "waiting_confirm":
+        await query.edit_message_text("Нет сообщения для рассылки. Начни с /send")
+        return
+
+    with_button = action == "send_yes_btn"
+    source_chat_id = ctx.user_data["send_chat_id"]
+    source_msg_id = ctx.user_data["send_message"]
+
+    ctx.user_data.pop("send_state", None)
+    ctx.user_data.pop("send_message", None)
+    ctx.user_data.pop("send_chat_id", None)
+
+    await query.edit_message_text("Рассылка начата...")
+
+    users = get_all_users()
+    active = {k: v for k, v in users.items() if v.get("setup_step") == "done"}
+
+    course_markup = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            "Узнать подробности",
+            web_app=WebAppInfo(url="https://svettutest.github.io/marathon-tracker/course.html"),
+        )
+    ]])
+
+    sent = 0
+    failed = 0
+    for user_id in active:
+        try:
+            await ctx.bot.copy_message(
+                chat_id=int(user_id),
+                from_chat_id=source_chat_id,
+                message_id=source_msg_id,
+            )
+            if with_button:
+                await ctx.bot.send_message(
+                    chat_id=int(user_id),
+                    text="Я для вас собрала специальные условия. Нажмите кнопку ниже",
+                    reply_markup=course_markup,
+                )
+            sent += 1
+            await asyncio.sleep(0.1)
+        except Exception as e:
+            logger.warning(f"Send broadcast failed for {user_id}: {e}")
+            failed += 1
+
+    await query.message.reply_text(f"Отправлено: {sent}\nОшибки: {failed}")
+
+
+# ══════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════
 
@@ -1338,9 +1450,12 @@ def main():
     app.add_handler(CommandHandler("broadcast_course", cmd_broadcast_course))
     app.add_handler(CommandHandler("confirm_broadcast", cmd_confirm_broadcast))
     app.add_handler(CallbackQueryHandler(cb_course_presentation, pattern=r"^cp_"))
+    app.add_handler(CommandHandler("send", cmd_send))
+    app.add_handler(CallbackQueryHandler(cb_send_confirm, pattern=r"^send_"))
     app.add_handler(MessageHandler(filters.Document.ALL & filters.CaptionRegex(r"^/restore"), cmd_restore))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_send_message), group=-1)
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run_web_server())
